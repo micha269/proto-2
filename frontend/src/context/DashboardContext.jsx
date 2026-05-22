@@ -22,7 +22,9 @@ export function DashboardProvider({ children }) {
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [oficina, setOficina] = useState("");
-  const pageSize = 50;
+  const [perfilTipoRiesgo, setPerfilTipoRiesgo] = useState("todos");
+  const [perfilRangoScore, setPerfilRangoScore] = useState("todos");
+  const [pageSize, setPageSize] = useState(50);
   const cancelRef = useRef(null);
 
   const aplicarRespuesta = useCallback((data) => {
@@ -52,6 +54,8 @@ export function DashboardProvider({ children }) {
       };
       if (busqueda) params.search = busqueda;
       if (oficina && oficina !== "todas") params.oficina = oficina;
+      if (perfilTipoRiesgo && perfilTipoRiesgo !== "todos") params.tipo_riesgo = perfilTipoRiesgo;
+      if (perfilRangoScore && perfilRangoScore !== "todos") params.rango_score = perfilRangoScore;
 
       const { data, status } = await axios.get(`${API_BASE}/api/dashboard/analisis/`, {
         params,
@@ -85,11 +89,11 @@ export function DashboardProvider({ children }) {
     } finally {
       if (!controller.signal.aborted) setCargando(false);
     }
-  }, [page, pageSize, searchTerm, oficina, aplicarRespuesta]);
+  }, [page, pageSize, searchTerm, oficina, perfilTipoRiesgo, perfilRangoScore, aplicarRespuesta]);
 
   useEffect(() => {
     setPage(1);
-  }, [searchTerm, oficina]);
+  }, [searchTerm, oficina, perfilTipoRiesgo, perfilRangoScore, pageSize]);
 
   useEffect(() => {
     let activo = true;
@@ -125,6 +129,12 @@ export function DashboardProvider({ children }) {
     setSearchTerm,
     oficina,
     setOficina,
+    perfilTipoRiesgo,
+    setPerfilTipoRiesgo,
+    perfilRangoScore,
+    setPerfilRangoScore,
+    pageSize,
+    setPageSize,
     cargando,
     sincronizando,
     conectado,

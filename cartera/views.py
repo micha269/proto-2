@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 UMBRAL_ALERTA_PROBABILIDAD = 40.0
 PAGE_SIZE_DEFAULT = 50
-PAGE_SIZE_MAX = 200
+PAGE_SIZE_MAX = 500
 CHUNK_SIZE = 1000
 PARALLEL_FETCH = 8
 BATCH_TOKENS_AHORRO = 150
@@ -467,6 +467,55 @@ def _extraer_agencias(credito: dict[str, dict]) -> list[dict]:
     ]
 
 
+def _variante_riesgo_prob(prob: float) -> str:
+    if prob >= 65:
+        return "critico"
+    if prob >= 40:
+        return "moderado"
+    return "estable"
+
+
+def _token_pasa_filtro_perfil(
+    token: str,
+    credito: dict[str, dict],
+    ahorro: dict[str, dict],
+    tipo_riesgo: str,
+    rango_score: str,
+) -> bool:
+    fila_credito = credito[token]
+    fila_ahorro = ahorro.get(token, {})
+    prob = _calcular_probabilidad_mora(
+        _parse_int(fila_credito.get("dias_mora")),
+        _parse_float(fila_ahorro.get("saldo_disponible")),
+        _parse_float(fila_credito.get("monto_credito")),
+    )
+    if tipo_riesgo != "todos" and _variante_riesgo_prob(prob) != tipo_riesgo:
+        return False
+    if rango_score == "alto" and prob < 65:
+        return False
+    if rango_score == "medio" and (prob < 40 or prob >= 65):
+        return False
+    if rango_score == "bajo" and prob >= 40:
+        return False
+    return True
+
+
+def _filtrar_tokens_por_perfil(
+    tokens: list[str],
+    credito: dict[str, dict],
+    ahorro: dict[str, dict],
+    tipo_riesgo: str,
+    rango_score: str,
+) -> list[str]:
+    if tipo_riesgo == "todos" and rango_score == "todos":
+        return tokens
+    return [
+        token
+        for token in tokens
+        if _token_pasa_filtro_perfil(token, credito, ahorro, tipo_riesgo, rango_score)
+    ]
+
+
 def _filtrar_tokens_por_oficina(
     tokens: list[str],
     credito: dict[str, dict],
@@ -500,6 +549,52 @@ def _calcular_metricas_globales(credito: dict[str, dict], ahorro: dict[str, dict
         "alertas_comportamentales_activas": alertas,
         "capital_exposicion_preventiva": round(capital, 2),
     }
+
+
+class PredictivoResumenAPI(APIView):
+    """Agregaciones predictivas sobre todos los socios en caché (sin límite de muestra)."""
+
+    authentication_classes = []
+    permission_classes = []
+    renderer_classes = [PrettyJSONRenderer, BrowsableAPIRenderer]
+
+    def get(self, request):
+        from .predictivo import calcular_resumen_predictivo
+
+        filtros = {
+            "oficina": (request.query_params.get("oficina") or "").strip(),
+            "tipo_riesgo": (request.query_params.get("tipo_riesgo") or "todos").strip(),
+            "rango_score": (request.query_params.get("rango_score") or "todos").strip(),
+            "solo_mora": (request.query_params.get("solo_mora") or "todos").strip(),
+            "calificacion": (request.query_params.get("calificacion") or "todas").strip(),
+        }
+
+        try:
+            datos = _obtener_datos_dashboard("")
+            if datos is None:
+                return Response(
+                    {
+                        "sincronizando": True,
+                        "mensaje": "Sincronizando cartera con Supabase.",
+                    },
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                )
+
+            resumen = calcular_resumen_predictivo(
+                datos["credito"],
+                datos["ahorro"],
+                filtros,
+            )
+            resumen["metricas_globales"] = datos["metricas"]
+            resumen["agencias"] = datos["agencias"]
+            resumen["universo_bd"] = datos.get("universo_bd")
+            return Response(resumen, status=status.HTTP_200_OK)
+        except requests.RequestException as exc:
+            logger.exception("Error en resumen predictivo")
+            return Response(
+                {"error": "No se pudo calcular el resumen predictivo.", "detalle": str(exc)},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
 
 
 class SocioDetalleAPI(APIView):
@@ -538,6 +633,8 @@ class DashboardAnalisisAPI(APIView):
 
         search = (request.query_params.get("search") or "").strip()
         oficina = (request.query_params.get("oficina") or "").strip()
+        tipo_riesgo = (request.query_params.get("tipo_riesgo") or "todos").strip()
+        rango_score = (request.query_params.get("rango_score") or "todos").strip()
         try:
             page = max(1, int(request.query_params.get("page", 1)))
         except (TypeError, ValueError):
@@ -588,6 +685,9 @@ class DashboardAnalisisAPI(APIView):
         tokens_ordenados = sorted(credito.keys())
         if oficina:
             tokens_ordenados = _filtrar_tokens_por_oficina(tokens_ordenados, credito, oficina)
+        tokens_ordenados = _filtrar_tokens_por_perfil(
+            tokens_ordenados, credito, ahorro, tipo_riesgo, rango_score
+        )
         total_socios = len(tokens_ordenados)
         total_pages = max(1, (total_socios + page_size - 1) // page_size)
         page = min(page, total_pages)
@@ -613,6 +713,10 @@ class DashboardAnalisisAPI(APIView):
                 },
                 "agencias": agencias,
                 "filtro_oficina": oficina or None,
+                "filtros_perfil": {
+                    "tipo_riesgo": tipo_riesgo,
+                    "rango_score": rango_score,
+                },
                 "universo_bd": universo_bd,
                 "modo": "supabase_rest",
                 "esquema": {

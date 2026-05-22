@@ -66,11 +66,11 @@ DATABASES = {
     },
     "supabase": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": "postgres",
-        "USER": "postgres",
-        "PASSWORD": "krizzen2026",
-        "HOST": "db.zfjgepbaokxeavipjxoi.supabase.co",
-        "PORT": "5432",
+        "NAME": os.environ.get("SUPABASE_DB_NAME", "postgres"),
+        "USER": os.environ.get("SUPABASE_DB_USER", "postgres"),
+        "PASSWORD": os.environ.get("SUPABASE_DB_PASSWORD", ""),
+        "HOST": os.environ.get("SUPABASE_DB_HOST", ""),
+        "PORT": os.environ.get("SUPABASE_DB_PORT", "5432"),
         "OPTIONS": {
             "sslmode": "require",
             "connect_timeout": 10,
@@ -105,10 +105,11 @@ REST_FRAMEWORK = {
     ],
 }
 
-SUPABASE_PROJECT_ID = "zfjgepbaokxeavipjxoi"
+SUPABASE_PROJECT_ID = os.environ.get("SUPABASE_PROJECT_ID", "")
 SUPABASE_PUBLIC_URL = "https://supabase.co"
-SUPABASE_PROJECT_URL = f"https://{SUPABASE_PROJECT_ID}.supabase.co"
-SUPABASE_ANON_KEY = (
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpmamdlcGJhb2t4ZWF2aXBqeG9pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzODgwMDAsImV4cCI6MjA5NDk2NDAwMH0.pTc-FFDAHu_vhdX_sB7onWqHtx6nzEl5-EUiNAVhsYA"
+SUPABASE_PROJECT_URL = os.environ.get(
+    "SUPABASE_PROJECT_URL",
+    f"https://{SUPABASE_PROJECT_ID}.supabase.co" if SUPABASE_PROJECT_ID else "",
 )
+SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", "")
 SUPABASE_SECRET_KEY = os.environ.get("SUPABASE_SECRET_KEY", "")

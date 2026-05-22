@@ -2,64 +2,49 @@
 
 Solución fullstack: **React + Tailwind v4** + **Django REST** + **Supabase** (REST HTTPS).
 
-## Versión
+## Versión 2.0.0
 
-- **v1.0.0** — Dashboard de riesgo, 17 agencias, paginación, caché Supabase, scoring heurístico de mora.
+- Logo oficial Cooptulcán en panel y barra lateral
+- Análisis predictivo con universo completo (~35k socios) y gráficos (pastel, histogramas)
+- Búsqueda de perfil con paginación (50/100 por página, 700+ páginas)
+- Ficha resumida de socio y gestión de alertas (modal + persistencia local)
+- Asistente IA Groq, API `/api/socio/{id}/`, `/api/dashboard/predictivo/resumen/`
+- **Sin credenciales en el repositorio** — configurar `.env` local
 
-## Entrega académica
-
-Este repositorio incluye **`.env`** y **`CREDENCIALES_ACADEMICO.md`** con API keys y acceso a base de datos para que el evaluador pueda ejecutar el proyecto sin configuración adicional.
+## Configuración (obligatoria)
 
 ```powershell
-# Opcional si no existe .env (ya viene en el repo académico)
 copy .env.example .env
+# Edite .env con SUPABASE_SECRET_KEY, SUPABASE_ANON_KEY, SUPABASE_DB_PASSWORD, VITE_GROQ_API_KEY, etc.
 ```
 
-## Versión actual
+El archivo `.env` está en `.gitignore` y **no debe subirse a Git**.
 
-- Dashboard Supabase REST, 17 agencias, asistente IA Groq, endpoint `/api/socio/{id}/`
+## Inicio rápido
+
+**Backend:**
+```powershell
+.\start-backend.ps1
+```
+
+**Frontend:**
+```powershell
+.\start-frontend.ps1
+```
+
+- Panel: http://localhost:5173/
+- API: http://127.0.0.1:8000/api/dashboard/analisis/
+
 ## Estructura
 
 ```
 proto 2/
-├── cooptech/settings.py      # Django + PostgreSQL Supabase
-├── cartera/views.py          # DashboardAnalisisAPI + motor IA mora
-├── cartera/urls.py           # /api/dashboard/analisis/
-├── frontend/src/Dashboard.jsx
-└── requirements.txt
+├── cooptech/           # Django
+├── cartera/            # API dashboard, predictivo, socio
+├── frontend/           # React SPA + logo en public/
+├── start-backend.ps1
+└── start-frontend.ps1
 ```
-
-## Inicio rápido (recomendado)
-
-**Terminal 1 — Backend:**
-```powershell
-cd "c:\Users\User\.cursor\proto 2"
-.\start-backend.ps1
-```
-
-**Abrir en el navegador:** [http://127.0.0.1:8000/](http://127.0.0.1:8000/)  
-(Dashboard integrado en Django; no requiere Node/npm.)
-
-API: `http://127.0.0.1:8000/api/dashboard/analisis/?search=9082`  
-Socio por ID: `http://127.0.0.1:8000/api/socio/{token}/`
-
-## Frontend React (opcional)
-
-Requiere Node.js instalado (`npm` en PATH):
-
-```powershell
-cd "c:\Users\User\.cursor\proto 2\frontend"
-npm install
-npm run dev
-```
-
-Abrir: `http://localhost:5173` (proxy Vite → Django `:8000`).
-
-## Si aparece "Connection failed"
-
-1. Confirme que `start-backend.ps1` está corriendo sin errores.
-2. Use **http://127.0.0.1:8000/** (no abra el HTML directamente).
-3. Si Supabase no responde desde su red, la API entrega **modo demo** con datos de muestra hasta habilitar su IP en Supabase → *Project Settings → Database → Network*.
 
 ## Motor predictivo de mora
 
@@ -70,10 +55,7 @@ Abrir: `http://localhost:5173` (proxy Vite → Django `:8000`).
 | `saldo_ahorro < 5%` del crédito | +35% |
 | Tope | 100% |
 
-## Supabase (esquema actualizado)
+## Supabase
 
-- **Project ID:** `zfjgepbaokxeavipjxoi`
-- **Tabla créditos:** `Tabla Creditos` (`monto_credito`, `dias_mora`, `fecha_corte`, `calificacion`, …)
-- **Tabla ahorros:** `Ahorros` (`saldo_disponible`, `fecha_corte_ahorro`)
-- **Transacciones:** `Supabase Transacciones`
-- Unión relacional por `token_seguridad` vía API REST HTTPS
+- Tablas: `Tabla Creditos`, `Ahorros`, `Supabase Transacciones`
+- Unión por `token_seguridad` vía API REST

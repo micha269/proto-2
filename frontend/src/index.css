@@ -50,7 +50,7 @@ svg {
 }
 
 .app-sidebar-brand {
-  background: var(--color-coop-green);
+  background: linear-gradient(180deg, var(--color-coop-green) 0%, var(--color-coop-green-dark) 100%);
   border-bottom: 3px solid var(--color-coop-orange);
 }
 

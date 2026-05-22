@@ -18,14 +18,14 @@ const navItems = [
 export default function Sidebar() {
   return (
     <aside className="app-sidebar">
-      <div className="app-sidebar-brand flex items-center gap-3 px-5 py-5">
-        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-coop-orange text-sm font-bold text-white shadow-md">
-          CT
-        </div>
-        <div className="leading-tight">
-          <span className="block text-sm font-bold">Cooperativa</span>
-          <span className="block text-xs font-medium text-white/90">Tulcán Ltda.</span>
-        </div>
+      <div className="app-sidebar-brand px-4 py-4">
+        <img
+          src="/logo-cooptulcan.png"
+          alt="Cooperativa de Ahorro y Crédito Tulcán Ltda."
+          className="mx-auto h-auto w-full max-h-[5.5rem] rounded-lg bg-white object-contain p-2 shadow-sm"
+          width={220}
+          height={88}
+        />
       </div>
 
       <p className="px-5 py-2 text-[10px] font-semibold uppercase tracking-wider text-white/50">

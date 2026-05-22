@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import GestionarAlertaModal from "../components/alertas/GestionarAlertaModal.jsx";
 import PageHeader from "../components/layout/PageHeader.jsx";
 import KpiCard from "../components/ui/KpiCard.jsx";
 import Card from "../components/ui/Card.jsx";
@@ -7,6 +8,7 @@ import Button from "../components/ui/Button.jsx";
 import { IconWarning, IconDollar, IconTrend } from "../components/icons/NavIcons.jsx";
 import { useDashboard } from "../context/DashboardContext.jsx";
 import { formatearMoneda, formatearFecha } from "../utils/format.js";
+import { obtenerEstadoAlerta } from "../utils/alertasStore.js";
 import { nivelRiesgo } from "../utils/risk.js";
 
 function disparadorConductual(socio) {
@@ -19,6 +21,14 @@ function disparadorConductual(socio) {
 
 export default function PanelPrincipal() {
   const [agencia, setAgencia] = useState("todas");
+  const [socioAlerta, setSocioAlerta] = useState(null);
+  const [revisionAlertas, setRevisionAlertas] = useState(0);
+
+  useEffect(() => {
+    const actualizar = () => setRevisionAlertas((n) => n + 1);
+    window.addEventListener("cooptech-alertas-actualizadas", actualizar);
+    return () => window.removeEventListener("cooptech-alertas-actualizadas", actualizar);
+  }, []);
   const {
     metricas,
     socios,
@@ -155,13 +165,20 @@ export default function PanelPrincipal() {
               {!cargando &&
                 (alertasTempranas.length > 0 ? alertasTempranas : socios.slice(0, 5)).map((socio) => {
                   const riesgo = nivelRiesgo(socio.probabilidad_mora);
+                  const estadoAlerta = obtenerEstadoAlerta(socio.token_seguridad).estado;
                   return (
-                    <tr key={socio.token_seguridad} className="border-b border-gray-50 hover:bg-coop-mint/60">
+                    <tr
+                      key={`${socio.token_seguridad}-${revisionAlertas}`}
+                      className="border-b border-gray-50 hover:bg-coop-mint/60"
+                    >
                       <td className="px-6 py-4">
                         <p className="font-semibold text-slate-800">{socio.nombre_anon}</p>
                         <p className="text-xs text-gray-500">
                           {socio.token_seguridad.slice(0, 4)}******* · SOC {socio.token_seguridad.slice(-4)}
                         </p>
+                        <Badge variant="neutral" className="mt-1">
+                          {estadoAlerta}
+                        </Badge>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
@@ -174,14 +191,7 @@ export default function PanelPrincipal() {
                       <td className="px-6 py-4 text-gray-600">{disparadorConductual(socio)}</td>
                       <td className="px-6 py-4 text-gray-600">{formatearFecha()}</td>
                       <td className="px-6 py-4">
-                        <Button
-                          size="sm"
-                          onClick={() =>
-                            window.alert(
-                              `Gestionar alerta\n${socio.nombre_anon}\nScore: ${socio.probabilidad_mora}%`
-                            )
-                          }
-                        >
+                        <Button size="sm" onClick={() => setSocioAlerta(socio)}>
                           Gestionar Alerta
                         </Button>
                       </td>
@@ -220,6 +230,12 @@ export default function PanelPrincipal() {
           </div>
         )}
       </Card>
+
+      <GestionarAlertaModal
+        socio={socioAlerta}
+        abierto={Boolean(socioAlerta)}
+        onCerrar={() => setSocioAlerta(null)}
+      />
     </div>
   );
 }
