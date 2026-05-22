@@ -6,6 +6,11 @@ from .supabase_schema import TABLA_AHORROS, TABLA_CREDITOS
 from .views import _headers_supabase, _url_tabla
 
 
+def ping(_request):
+    """Comprobación ligera para Docker (no llama a Supabase)."""
+    return JsonResponse({"status": "ok", "service": "cooptech-backend"})
+
+
 def health_check(_request):
     try:
         for tabla in (TABLA_CREDITOS, TABLA_AHORROS):

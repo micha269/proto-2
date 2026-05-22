@@ -20,7 +20,40 @@ copy .env.example .env
 
 El archivo `.env` está en `.gitignore` y **no debe subirse a Git**.
 
-## Inicio rápido
+## Inicio con Docker (recomendado en otras PCs)
+
+Requisitos: [Docker Desktop](https://www.docker.com/products/docker-desktop/) instalado y en ejecución.
+
+```powershell
+copy .env.example .env
+# Editar .env con credenciales Supabase + VITE_GROQ_API_KEY
+
+.\start-docker.ps1
+```
+
+En Linux/macOS:
+
+```bash
+chmod +x start-docker.sh
+./start-docker.sh
+```
+
+| Servicio | URL |
+|----------|-----|
+| **Panel web** | http://localhost:5173/ |
+| **API Django** | http://localhost:8000/ |
+
+Comandos útiles:
+
+```powershell
+docker compose logs -f      # ver logs
+docker compose down         # detener
+docker compose up --build   # reconstruir tras cambios
+```
+
+La caché de Supabase se guarda en el volumen Docker `cooptech_cache`.
+
+## Inicio local (sin Docker)
 
 **Backend:**
 ```powershell
