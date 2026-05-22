@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.cache/
+*.pkl
+cooptech_local.sqlite3
+db.sqlite3
+frontend/node_modules/
+frontend/dist/
+.DS_Store

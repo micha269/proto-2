@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cooperativa Tulcán — RISK-CORE</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>body{font-family:'IBM Plex Sans',sans-serif}</style>
+</head>
+<body class="bg-[#E8F5EA] text-slate-800 min-h-screen">
+  <header class="bg-[#3DAA4A] text-white shadow-lg px-6 py-5 border-b-4 border-[#F39237]">
+    <h1 class="text-xl font-bold">COOPERATIVA TULCÁN — RISK-CORE</h1>
+    <p class="text-sm text-white/90 mt-1">Sembrando un futuro juntos · datos Supabase</p>
+    <p id="estado" class="mt-2 text-sm font-medium">Cargando datos...</p>
+    <p id="aviso-api" class="mt-1 text-xs text-white/70 hidden">
+      ¿Ve solo JSON? Abra esta página: <strong>http://127.0.0.1:8000/</strong> (no la URL /api/...)
+    </p>
+  </header>
+
+  <main class="max-w-7xl mx-auto p-6">
+    <div id="metricas" class="grid md:grid-cols-3 gap-4 mb-6"></div>
+
+    <section class="mb-4 rounded-xl bg-white border border-slate-200 p-4 shadow-sm">
+      <label class="block text-sm font-semibold text-[#155A32] mb-2">Búsqueda por Crypto-Token</label>
+      <input id="busqueda" type="text" class="w-full border border-[#3DAA4A]/30 rounded-xl px-4 py-3 text-sm focus:border-[#F39237] focus:ring-2 focus:ring-[#F39237]/25 outline-none" placeholder="Ej: 9082, A4472E..." />
+      <p id="contador" class="mt-2 text-xs text-slate-500"></p>
+    </section>
+
+    <div id="error" class="hidden mb-4 rounded-xl bg-red-50 border border-red-200 text-[#D32F2F] px-4 py-3 text-sm"></div>
+
+    <div id="tabla" class="bg-white rounded-2xl shadow-lg overflow-hidden border border-slate-200">
+      <p class="p-8 text-center text-slate-500">Sincronizando cartera...</p>
+    </div>
+  </main>
+
+  <script>
+    const API = '/api/dashboard/analisis/';
+    const fmt = (n) => new Intl.NumberFormat('es-EC', { style: 'currency', currency: 'USD' }).format(n ?? 0);
+    const color = (p) => (p >= 65 ? 'text-[#D32F2F]' : p >= 40 ? 'text-[#D97B20]' : 'text-[#1F6B3D]');
+
+    function normalizarSocios(socios) {
+      if (Array.isArray(socios)) return socios;
+      if (socios && typeof socios === 'object') return [socios];
+      return [];
+    }
+
+    async function cargar(q = '') {
+      const errorEl = document.getElementById('error');
+      const tablaEl = document.getElementById('tabla');
+      errorEl.classList.add('hidden');
+      tablaEl.innerHTML = '<p class="p-8 text-center text-slate-500">Consultando Supabase...</p>';
+
+      try {
+        const url = API + (q ? `?search=${encodeURIComponent(q)}` : '');
+        const r = await fetch(url, { headers: { Accept: 'application/json' } });
+        const d = await r.json();
+
+        if (!r.ok) {
+          throw new Error(d.detalle || d.error || 'Error en la API');
+        }
+
+        const lista = normalizarSocios(d.socios);
+        const m = d.metricas || {};
+
+        document.getElementById('estado').textContent =
+          d.modo === 'supabase_rest'
+            ? `● Conexión en vivo · ${lista.length} socios en pantalla · modo ${d.modo}`
+            : `● Datos cargados · ${lista.length} registros`;
+
+        const u = d.universo_bd || {};
+        const p = d.paginacion || {};
+        document.getElementById('contador').textContent =
+          `Página ${p.page || 1} de ${p.total_pages || 1} · ${lista.length} en pantalla · ` +
+          `${(p.total_socios || m.total_socios_analizados || 0).toLocaleString('es-EC')} socios únicos · ` +
+          `${(u.filas_tabla_creditos || 0).toLocaleString('es-EC')} filas crédito en BD`;
+
+        document.getElementById('metricas').innerHTML = `
+          <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-100">
+            <p class="text-sm text-slate-500">Socios Analizados</p>
+            <p class="text-3xl font-bold text-[#155A32]">${(m.total_socios_analizados || 0).toLocaleString('es-EC')}</p>
+          </div>
+          <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-100">
+            <p class="text-sm text-slate-500">Alertas Comportamentales</p>
+            <p class="text-3xl font-bold text-[#D32F2F]">${m.alertas_comportamentales_activas || 0}</p>
+          </div>
+          <div class="bg-white p-5 rounded-2xl shadow-md border border-slate-100">
+            <p class="text-sm text-slate-500">Capital en Exposición</p>
+            <p class="text-3xl font-bold text-[#3DAA4A]">${fmt(m.capital_exposicion_preventiva || 0)}</p>
+          </div>`;
+
+        if (lista.length === 0) {
+          tablaEl.innerHTML = '<p class="p-8 text-center text-slate-500">Sin resultados para ese token.</p>';
+          return;
+        }
+
+        const rows = lista.map((s) => `
+          <tr class="border-t border-slate-100 hover:bg-blue-50/70 cursor-pointer" onclick="alert('Protocolo de mitigación\\n${s.nombre_anon}\\nProbabilidad: ${s.probabilidad_mora}%')">
+            <td class="px-4 py-3 font-mono text-xs">${s.token_seguridad}</td>
+            <td class="px-4 py-3">${s.nombre_anon}</td>
+            <td class="px-4 py-3">${fmt(s.monto_credito)}</td>
+            <td class="px-4 py-3 ${s.dias_mora > 0 ? 'text-[#D32F2F] font-semibold' : ''}">${s.dias_mora}</td>
+            <td class="px-4 py-3 font-semibold ${color(s.probabilidad_mora)}">${Number(s.probabilidad_mora).toFixed(2)}%</td>
+          </tr>`).join('');
+
+        tablaEl.innerHTML = `
+          <div class="overflow-x-auto max-h-[65vh]">
+            <table class="min-w-full text-sm text-left">
+              <thead class="bg-[#1F6B3D] text-white text-xs uppercase sticky top-0">
+                <tr>
+                  <th class="px-4 py-3">Crypto-Token</th>
+                  <th class="px-4 py-3">Identidad</th>
+                  <th class="px-4 py-3">Monto Crédito</th>
+                  <th class="px-4 py-3">Días Mora</th>
+                  <th class="px-4 py-3">Score IA</th>
+                </tr>
+              </thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>`;
+      } catch (err) {
+        document.getElementById('estado').textContent = '● Sin conexión al backend';
+        errorEl.textContent = err.message + ' — Ejecute .\\start-backend.ps1 y recargue http://127.0.0.1:8000/';
+        errorEl.classList.remove('hidden');
+        tablaEl.innerHTML = '<p class="p-8 text-center text-[#D32F2F]">No se pudo cargar la tabla.</p>';
+      }
+    }
+
+    document.getElementById('busqueda').addEventListener('input', (e) => {
+      clearTimeout(window._t);
+      window._t = setTimeout(() => cargar(e.target.value.trim()), 300);
+    });
+
+    cargar();
+  </script>
+</body>
+</html>
